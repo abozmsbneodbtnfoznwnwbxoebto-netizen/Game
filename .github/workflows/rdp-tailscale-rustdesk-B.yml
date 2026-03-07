@@ -276,10 +276,25 @@ jobs:
           $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
           $bitmap.Save($screenshotPath, [System.Drawing.Imaging.ImageFormat]::Png)
           $graphics.Dispose(); $bitmap.Dispose()
+          
+          # FIXED SECTION START
+          Write-Host "Uploading screenshot to Gofile..."
+          $curlResult = curl.exe -s -F "file=@$screenshotPath" https://store1.gofile.io/uploadFile
 
-          $curlResult = curl -F "file=@$screenshotPath" https://store1.gofile.io/uploadFile
-          $json = $curlResult | ConvertFrom-Json
-          if ($json.status -eq "ok") { "SCREENSHOT_URL=$($json.data.downloadPage)" | Out-File -Append $env:GITHUB_ENV }
+          try {
+            $json = $curlResult | ConvertFrom-Json
+            if ($json.status -eq "ok") { 
+              "SCREENSHOT_URL=$($json.data.downloadPage)" | Out-File -Append $env:GITHUB_ENV 
+              Write-Host "Success! URL: $($json.data.downloadPage)"
+            } else {
+              Write-Host "Upload returned status: $($json.status)"
+              Write-Host "Full response: $curlResult"
+            }
+          } catch {
+             Write-Warning "JSON parsing failed. Server might be busy or returned HTML."
+             Write-Host "Raw Output: $curlResult"
+          }
+          # FIXED SECTION END
 
       - name: Keep alive (to ${{ env.RUNTIME_MINUTES }} mins)
         run: |
@@ -326,3 +341,4 @@ jobs:
               Write-Host "Dispatched Workflow B with cycles=$next"
             }
           } else { Write-Host "No cycles configured. Done." }
+          
