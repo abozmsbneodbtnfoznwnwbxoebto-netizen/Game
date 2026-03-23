@@ -12,10 +12,10 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4 # এখানে v4 করা হয়েছে
+        uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4 # এখানে v4 করা হয়েছে
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -29,13 +29,16 @@ jobs:
       - name: Decompile a.zip
         run: |
           echo "Decoding files..."
-          ./jadx/bin/jadx -d decompiled_app a.zip
+          # --show-bad-code এরর হওয়া ফাইলগুলোর কোড রিকভার করবে
+          # || true গিটহাব অ্যাকশনকে ফেইল হওয়া থেকে বাঁচাবে
+          ./jadx/bin/jadx -d decompiled_app --show-bad-code a.zip || true
 
       - name: Create acode.txt with Formatted Code
         run: |
           touch acode.txt
           echo "Merging all code files into acode.txt..."
           
+          # সব কোড ফাইল খুঁজে বের করে আপনার ফরম্যাটে acode.txt এ সেভ করবে
           find decompiled_app -type f \( -name "*.java" -o -name "*.xml" -o -name "*.kt" -o -name "*.json" -o -name "*.txt" \) | while read -r filepath; do
             filename=$(basename "$filepath")
             
@@ -48,7 +51,7 @@ jobs:
           done
 
       - name: Upload acode.txt as Artifact
-        uses: actions/upload-artifact@v4 # মূল এররটি এখান থেকেই আসছিল, এটি v4 করা হয়েছে
+        uses: actions/upload-artifact@v4
         with:
           name: Extracted-Code-acode
           path: acode.txt
