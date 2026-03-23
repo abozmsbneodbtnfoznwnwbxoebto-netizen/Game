@@ -1,0 +1,57 @@
+name: Decode App and Extract Code
+
+on:
+  push:
+    paths:
+      - 'a.zip' # যখনই a.zip আপলোড বা পরিবর্তন হবে, তখন এটি রান করবে
+  workflow_dispatch: # ম্যানুয়ালি রান করার জন্য
+
+jobs:
+  decompile-and-merge:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 17 (Required for JADX)
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Download and Install JADX
+        run: |
+          wget https://github.com/skylot/jadx/releases/download/v1.4.7/jadx-1.4.7.zip
+          unzip jadx-1.4.7.zip -d jadx
+          chmod +x jadx/bin/jadx
+
+      - name: Decompile a.zip
+        run: |
+          echo "Decoding files..."
+          # a.zip কে ডিকোড করে decompiled_app ফোল্ডারে রাখবে
+          ./jadx/bin/jadx -d decompiled_app a.zip
+
+      - name: Create acode.txt with Formatted Code
+        run: |
+          touch acode.txt
+          echo "Merging all code files into acode.txt..."
+          
+          # শুধুমাত্র কোড ফাইলগুলো (java, xml, kt, json, txt) খুঁজবে। 
+          # ছবি বা অডিও ফাইল বাদ দেওয়া হয়েছে, না হলে টেক্সট ফাইল নষ্ট হয়ে যাবে।
+          find decompiled_app -type f \( -name "*.java" -o -name "*.xml" -o -name "*.kt" -o -name "*.json" -o -name "*.txt" \) | while read -r filepath; do
+            filename=$(basename "$filepath")
+            
+            echo "################" >> acode.txt
+            echo "Filename:- $filename" >> acode.txt
+            echo "filepath:- $filepath" >> acode.txt
+            echo "Code:- " >> acode.txt
+            cat "$filepath" >> acode.txt
+            echo -e "\n##################\n" >> acode.txt
+          done
+
+      - name: Upload acode.txt as Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: Extracted-Code-acode
+          path: acode.txt
