@@ -40,8 +40,8 @@ jobs:
       - name: Download Video File
         run: |
           echo "Downloading video from link..."
-          # wget diye file ti download kore 'video.mp4' name save korbe
-          wget -O video.mp4 "${{ github.event.inputs.video_url }}"
+          # curl use kora hoyeche sathe User-Agent jate 403 error bypass kora jay
+          curl -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36" -o video.mp4 "${{ github.event.inputs.video_url }}"
           echo "Download completed!"
 
       - name: Create Python Script for Upload
@@ -58,16 +58,16 @@ jobs:
           FILE_PATH = "video.mp4"
 
           async def main():
-              # Pyrogram client initialize kora hocche API credentials diye
               app = Client("my_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
               
               async with app:
                   print("Telegram e video upload shuru hocche. Please wait...")
+                  # supports_streaming=True rakha hoyeche jate Telegram e as a Video play hoy
                   await app.send_video(
                       chat_id=int(CHAT_ID),
                       video=FILE_PATH,
-                      caption="Here is your video!",
-                      supports_streaming=True # Eta video hisebe play korar jonno important
+                      caption="Here is your downloaded video!",
+                      supports_streaming=True 
                   )
                   print("Video upload successfully completed!")
 
@@ -82,3 +82,4 @@ jobs:
           BOT_TOKEN: ${{ github.event.inputs.bot_token }}
           CHAT_ID: ${{ github.event.inputs.chat_id }}
         run: python upload.py
+        
