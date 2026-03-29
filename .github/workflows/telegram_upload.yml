@@ -1,0 +1,84 @@
+name: Telegram Large Video Downloader & Uploader
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_id:
+        description: 'Telegram API ID'
+        required: true
+      api_hash:
+        description: 'Telegram API Hash'
+        required: true
+      bot_token:
+        description: 'Telegram Bot Token'
+        required: true
+      chat_id:
+        description: 'Target Chat ID (apnar user ID)'
+        required: true
+      video_url:
+        description: 'Direct Download Link'
+        required: true
+        default: 'https://tinyurl.com/2d63a2wh'
+
+jobs:
+  download_and_upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Pyrogram and TgCrypto
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyrogram tgcrypto
+
+      - name: Download Video File
+        run: |
+          echo "Downloading video from link..."
+          # wget diye file ti download kore 'video.mp4' name save korbe
+          wget -O video.mp4 "${{ github.event.inputs.video_url }}"
+          echo "Download completed!"
+
+      - name: Create Python Script for Upload
+        run: |
+          cat << 'EOF' > upload.py
+          import os
+          import asyncio
+          from pyrogram import Client
+
+          API_ID = os.environ.get("API_ID")
+          API_HASH = os.environ.get("API_HASH")
+          BOT_TOKEN = os.environ.get("BOT_TOKEN")
+          CHAT_ID = os.environ.get("CHAT_ID")
+          FILE_PATH = "video.mp4"
+
+          async def main():
+              # Pyrogram client initialize kora hocche API credentials diye
+              app = Client("my_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+              
+              async with app:
+                  print("Telegram e video upload shuru hocche. Please wait...")
+                  await app.send_video(
+                      chat_id=int(CHAT_ID),
+                      video=FILE_PATH,
+                      caption="Here is your video!",
+                      supports_streaming=True # Eta video hisebe play korar jonno important
+                  )
+                  print("Video upload successfully completed!")
+
+          if __name__ == "__main__":
+              asyncio.run(main())
+          EOF
+
+      - name: Run Upload Script
+        env:
+          API_ID: ${{ github.event.inputs.api_id }}
+          API_HASH: ${{ github.event.inputs.api_hash }}
+          BOT_TOKEN: ${{ github.event.inputs.bot_token }}
+          CHAT_ID: ${{ github.event.inputs.chat_id }}
+        run: python upload.py
